@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Fiscal - Prime Events</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primeGold: '#C5A059',
+                        primeGoldLight: '#E8D5B5',
+                        primeDark: '#2C2C2C',
+                        primeBg: '#FDFBF7'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+    <style>
+        @keyframes slideUpFade {
+            0% { opacity: 0; transform: translateY(20px) translateX(-50%); }
+            10% { opacity: 1; transform: translateY(0) translateX(-50%); }
+            90% { opacity: 1; transform: translateY(0) translateX(-50%); }
+            100% { opacity: 0; transform: translateY(-20px) translateX(-50%); }
+        }
+        .toast-animate {
+            animation: slideUpFade 3s forwards;
+        }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] { -moz-appearance: textfield; }
+    </style>
+</head>
+<body class="bg-primeBg text-primeDark min-h-screen flex items-center justify-center p-4 font-sans selection:bg-primeGold selection:text-white">
+
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        
+        <!-- Encabezado -->
+        <div class="bg-primeDark px-6 py-8 text-center relative">
+            <div class="absolute top-0 left-0 w-full h-1 bg-primeGold"></div>
+            <h1 class="font-serif text-3xl text-white mb-1">Prime Events</h1>
+            <p class="text-primeGoldLight text-sm uppercase tracking-widest font-semibold">Calculadora de Renta</p>
+            <p class="text-gray-400 text-xs mt-2">Actividad Empresarial a Persona Moral</p>
+        </div>
+
+        <div class="p-6 md:p-8 space-y-6">
+            
+            <!-- Toggle de Modo de Cálculo -->
+            <div class="flex bg-gray-100 p-1 rounded-xl">
+                <button id="btnModoSub" onclick="cambiarModo('subtotal')" class="flex-1 py-2 text-sm font-bold bg-white shadow-sm rounded-lg text-primeDark transition-all">Tengo el Subtotal</button>
+                <button id="btnModoTot" onclick="cambiarModo('total')" class="flex-1 py-2 text-sm font-medium text-gray-500 rounded-lg hover:text-primeDark transition-all">Tengo el Total Neto</button>
+            </div>
+
+            <!-- Campo de Entrada -->
+            <div>
+                <label id="lblInput" for="montoInput" class="block text-sm font-semibold text-gray-700 mb-2">Precio de Renta (Subtotal sin IVA)</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <span class="text-gray-500 font-semibold text-lg">$</span>
+                    </div>
+                    <input type="number" id="montoInput" placeholder="0.00" 
+                        class="block w-full pl-8 pr-4 py-3 text-lg font-semibold text-gray-900 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primeGold focus:border-primeGold focus:bg-white transition-colors duration-200 outline-none"
+                        oninput="calcularImpuestos()">
+                </div>
+            </div>
+
+            <div class="border-t border-gray-100"></div>
+
+            <!-- Desglose -->
+            <div class="space-y-3">
+                <h3 class="text-xs uppercase tracking-wider text-gray-400 font-bold mb-4">Desglose Fiscal Exacto</h3>
+                
+                <div class="flex justify-between items-center text-gray-600">
+                    <span class="text-sm">Subtotal</span>
+                    <span id="lblSubtotal" class="font-medium text-gray-900">$0.00</span>
+                </div>
+                
+                <div class="flex justify-between items-center text-gray-600">
+                    <span class="text-sm">IVA Trasladado (16%)</span>
+                    <span id="lblIva" class="font-medium text-gray-900">$0.00</span>
+                </div>
+                
+                <div class="flex justify-between items-center text-red-500">
+                    <div class="flex flex-col">
+                        <span class="text-sm">Retención IVA (10.6667%)</span>
+                        <span class="text-[10px] text-red-400">2/3 partes del IVA</span>
+                    </div>
+                    <span id="lblRetIva" class="font-medium">-$0.00</span>
+                </div>
+            </div>
+
+            <!-- Total a Pagar -->
+            <div class="bg-primeGoldLight/30 rounded-xl p-4 mt-4 border border-primeGoldLight">
+                <div class="flex justify-between items-center">
+                    <span class="font-serif text-lg font-bold text-primeDark">Total Neto a Cobrar</span>
+                    <span id="lblTotal" class="font-sans text-2xl font-bold text-primeGold">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Botón Copiar -->
+            <button onclick="copiarWhatsApp()" 
+                class="w-full flex items-center justify-center gap-2 bg-primeGold hover:bg-[#b08d4b] active:bg-[#9d7d42] text-white font-semibold py-3 px-4 rounded-xl transition-colors shadow-md shadow-primeGold/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primeGold mt-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+                Copiar Desglose para WhatsApp
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toastMensaje" class="fixed top-10 left-1/2 -translate-x-1/2 bg-primeDark text-white px-6 py-3 rounded-full shadow-lg font-medium text-sm flex items-center gap-2 opacity-0 pointer-events-none z-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+        </svg>
+        ¡Desglose copiado al portapapeles!
+    </div>
+
+    <script>
+        let modoCalculo = 'subtotal';
+        
+        let calc = {
+            subtotal: 0,
+            iva: 0,
+            retIva: 0,
+            total: 0
+        };
+
+        const formatearDinero = (cantidad) => {
+            return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(cantidad);
+        };
+
+        function cambiarModo(modo) {
+            modoCalculo = modo;
+            document.getElementById('montoInput').value = '';
+            
+            // Estilos del toggle
+            if (modo === 'subtotal') {
+                document.getElementById('btnModoSub').className = 'flex-1 py-2 text-sm font-bold bg-white shadow-sm rounded-lg text-primeDark transition-all';
+                document.getElementById('btnModoTot').className = 'flex-1 py-2 text-sm font-medium text-gray-500 rounded-lg hover:text-primeDark transition-all';
+                document.getElementById('lblInput').innerText = 'Precio de Renta (Subtotal sin IVA)';
+            } else {
+                document.getElementById('btnModoTot').className = 'flex-1 py-2 text-sm font-bold bg-white shadow-sm rounded-lg text-primeDark transition-all';
+                document.getElementById('btnModoSub').className = 'flex-1 py-2 text-sm font-medium text-gray-500 rounded-lg hover:text-primeDark transition-all';
+                document.getElementById('lblInput').innerText = 'Monto que quieres recibir libre (Total Neto)';
+            }
+            calcularImpuestos();
+        }
+
+        function calcularImpuestos() {
+            const input = document.getElementById('montoInput').value;
+            
+            if (!input || isNaN(input)) {
+                calc = { subtotal: 0, iva: 0, retIva: 0, total: 0 };
+            } else {
+                let valorIngresado = parseFloat(input);
+                
+                // Factor matemático para Actividad Empresarial (1 + 0.16 - (0.16 * 2/3))
+                const factorTotal = 1.0533333333333333; 
+
+                if (modoCalculo === 'total') {
+                    // Cálculo a la inversa
+                    calc.subtotal = valorIngresado / factorTotal;
+                } else {
+                    // Cálculo normal
+                    calc.subtotal = valorIngresado;
+                }
+                
+                // Redondeos escalonados a 2 decimales para evitar descuadres de 1 centavo
+                calc.subtotal = Math.round(calc.subtotal * 100) / 100;
+                calc.iva = Math.round((calc.subtotal * 0.16) * 100) / 100;
+                calc.retIva = Math.round((calc.iva * (2 / 3)) * 100) / 100;
+                
+                // El total se suma de los elementos ya redondeados
+                calc.total = Math.round((calc.subtotal + calc.iva - calc.retIva) * 100) / 100;
+            }
+
+            document.getElementById('lblSubtotal').innerText = formatearDinero(calc.subtotal);
+            document.getElementById('lblIva').innerText = formatearDinero(calc.iva);
+            document.getElementById('lblRetIva').innerText = "-" + formatearDinero(calc.retIva);
+            document.getElementById('lblTotal').innerText = formatearDinero(calc.total);
+        }
+
+        function copiarWhatsApp() {
+            if (calc.subtotal === 0) {
+                mostrarToast("Ingresa un monto para copiar.", false);
+                return;
+            }
+
+            const textoWhatsApp = 
+`*Cotización / Desglose - Prime Events* ✨🛋️
+
+Subtotal: ${formatearDinero(calc.subtotal)}
+IVA (16%): ${formatearDinero(calc.iva)}
+Retención IVA (10.6667%): -${formatearDinero(calc.retIva)}
+
+*Total Neto a Transferir: ${formatearDinero(calc.total)}*
+
+_Nota: Favor de emitir el comprobante de retenciones correspondiente al realizar el pago._`;
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(textoWhatsApp).then(() => {
+                    mostrarToast("¡Desglose copiado al portapapeles!", true);
+                }).catch(() => fallbackCopy(textoWhatsApp));
+            } else {
+                fallbackCopy(textoWhatsApp);
+            }
+        }
+
+        function fallbackCopy(text) {
+            let textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-9999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                mostrarToast("¡Desglose copiado al portapapeles!", true);
+            } catch (err) {
+                mostrarToast("Error al copiar.", false);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function mostrarToast(mensaje, exito) {
+            const toast = document.getElementById('toastMensaje');
+            if (exito) {
+                toast.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg> ${mensaje}`;
+            } else {
+                toast.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg> ${mensaje}`;
+            }
+            toast.classList.remove('toast-animate');
+            void toast.offsetWidth;
+            toast.classList.add('toast-animate');
+        }
+    </script>
+</body>
+</html>

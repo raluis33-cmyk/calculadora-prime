@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Fiscal - Prime Events</title>
+    <title>Calculadora Prime Events</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -52,11 +52,17 @@
             <div class="absolute top-0 left-0 w-full h-1 bg-primeGold"></div>
             <h1 class="font-serif text-3xl text-white mb-1">Prime Events</h1>
             <p class="text-primeGoldLight text-sm uppercase tracking-widest font-semibold">Calculadora de Renta</p>
-            <p class="text-gray-400 text-xs mt-2">Actividad Empresarial a Persona Moral</p>
+            <p id="lblHeaderRegimen" class="text-gray-400 text-xs mt-2">Facturación a Persona Moral</p>
         </div>
 
         <div class="p-6 md:p-8 space-y-6">
             
+            <!-- Toggle de Tipo de Cliente (NUEVO) -->
+            <div class="flex bg-gray-100 p-1 rounded-xl">
+                <button id="btnClienteMoral" onclick="cambiarCliente('moral')" class="flex-1 py-2 text-sm font-bold bg-white shadow-sm rounded-lg text-primeDark transition-all">A Persona Moral</button>
+                <button id="btnClienteFisica" onclick="cambiarCliente('fisica')" class="flex-1 py-2 text-sm font-medium text-gray-500 rounded-lg hover:text-primeDark transition-all">A Persona Física</button>
+            </div>
+
             <!-- Toggle de Modo de Cálculo -->
             <div class="flex bg-gray-100 p-1 rounded-xl">
                 <button id="btnModoSub" onclick="cambiarModo('subtotal')" class="flex-1 py-2 text-sm font-bold bg-white shadow-sm rounded-lg text-primeDark transition-all">Tengo el Subtotal</button>
@@ -92,7 +98,8 @@
                     <span id="lblIva" class="font-medium text-gray-900">$0.00</span>
                 </div>
                 
-                <div class="flex justify-between items-center text-red-500">
+                <!-- Fila de Retención IVA que se ocultará en PF -->
+                <div id="rowRetIva" class="flex justify-between items-center text-red-500">
                     <div class="flex flex-col">
                         <span class="text-sm">Retención IVA (10.6667%)</span>
                         <span class="text-[10px] text-red-400">2/3 partes del IVA</span>
@@ -130,6 +137,7 @@
 
     <script>
         let modoCalculo = 'subtotal';
+        let tipoCliente = 'moral';
         
         let calc = {
             subtotal: 0,
@@ -142,11 +150,30 @@
             return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(cantidad);
         };
 
+        function cambiarCliente(tipo) {
+            tipoCliente = tipo;
+            document.getElementById('montoInput').value = '';
+            calc = { subtotal: 0, iva: 0, retIva: 0, total: 0 };
+            
+            if (tipo === 'moral') {
+                document.getElementById('btnClienteMoral').className = 'flex-1 py-2 text-sm font-bold bg-white shadow-sm rounded-lg text-primeDark transition-all';
+                document.getElementById('btnClienteFisica').className = 'flex-1 py-2 text-sm font-medium text-gray-500 rounded-lg hover:text-primeDark transition-all';
+                document.getElementById('rowRetIva').style.display = 'flex';
+                document.getElementById('lblHeaderRegimen').innerText = 'Facturación a Persona Moral';
+            } else {
+                document.getElementById('btnClienteFisica').className = 'flex-1 py-2 text-sm font-bold bg-white shadow-sm rounded-lg text-primeDark transition-all';
+                document.getElementById('btnClienteMoral').className = 'flex-1 py-2 text-sm font-medium text-gray-500 rounded-lg hover:text-primeDark transition-all';
+                document.getElementById('rowRetIva').style.display = 'none';
+                document.getElementById('lblHeaderRegimen').innerText = 'Facturación a Persona Física';
+            }
+            calcularImpuestos();
+        }
+
         function cambiarModo(modo) {
             modoCalculo = modo;
             document.getElementById('montoInput').value = '';
+            calc = { subtotal: 0, iva: 0, retIva: 0, total: 0 };
             
-            // Estilos del toggle
             if (modo === 'subtotal') {
                 document.getElementById('btnModoSub').className = 'flex-1 py-2 text-sm font-bold bg-white shadow-sm rounded-lg text-primeDark transition-all';
                 document.getElementById('btnModoTot').className = 'flex-1 py-2 text-sm font-medium text-gray-500 rounded-lg hover:text-primeDark transition-all';
@@ -167,23 +194,24 @@
             } else {
                 let valorIngresado = parseFloat(input);
                 
-                // Factor matemático para Actividad Empresarial (1 + 0.16 - (0.16 * 2/3))
-                const factorTotal = 1.0533333333333333; 
+                // Factor cambia si es Moral (con retención) o Física (sin retención)
+                const factorTotal = tipoCliente === 'moral' ? 1.0533333333333333 : 1.16;
 
                 if (modoCalculo === 'total') {
-                    // Cálculo a la inversa
                     calc.subtotal = valorIngresado / factorTotal;
                 } else {
-                    // Cálculo normal
                     calc.subtotal = valorIngresado;
                 }
                 
-                // Redondeos escalonados a 2 decimales para evitar descuadres de 1 centavo
                 calc.subtotal = Math.round(calc.subtotal * 100) / 100;
                 calc.iva = Math.round((calc.subtotal * 0.16) * 100) / 100;
-                calc.retIva = Math.round((calc.iva * (2 / 3)) * 100) / 100;
                 
-                // El total se suma de los elementos ya redondeados
+                if (tipoCliente === 'moral') {
+                    calc.retIva = Math.round((calc.iva * (2 / 3)) * 100) / 100;
+                } else {
+                    calc.retIva = 0;
+                }
+                
                 calc.total = Math.round((calc.subtotal + calc.iva - calc.retIva) * 100) / 100;
             }
 
@@ -199,16 +227,13 @@
                 return;
             }
 
-            const textoWhatsApp = 
-`*Cotización / Desglose - Prime Events* ✨🛋️
-
-Subtotal: ${formatearDinero(calc.subtotal)}
-IVA (16%): ${formatearDinero(calc.iva)}
-Retención IVA (10.6667%): -${formatearDinero(calc.retIva)}
-
-*Total Neto a Transferir: ${formatearDinero(calc.total)}*
-
-_Nota: Favor de emitir el comprobante de retenciones correspondiente al realizar el pago._`;
+            let textoWhatsApp = `*Cotización / Desglose - Prime Events* ✨🛋️\n\nSubtotal: ${formatearDinero(calc.subtotal)}\nIVA (16%): ${formatearDinero(calc.iva)}\n`;
+            
+            if (tipoCliente === 'moral') {
+                textoWhatsApp += `Retención IVA (10.6667%): -${formatearDinero(calc.retIva)}\n\n*Total Neto a Transferir: ${formatearDinero(calc.total)}*\n\n_Nota: Favor de emitir el comprobante de retenciones correspondiente al realizar el pago._`;
+            } else {
+                textoWhatsApp += `\n*Total Neto a Transferir: ${formatearDinero(calc.total)}*`;
+            }
 
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(textoWhatsApp).then(() => {
